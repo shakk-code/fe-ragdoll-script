@@ -106,4 +106,12 @@ tool.Equipped:Connect(function()
 	end)
 end)
 
+tool.Unequipped:Connect(function()
+	equipped = false
+	if mouseDownConnection then
+		mouseDownConnection:Disconnect()
+		mouseDownConnection = nil
+	end
+end)
+
 tool.Parent = player.Backpack
