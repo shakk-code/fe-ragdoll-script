@@ -206,4 +206,4 @@ tool.Unequipped:Connect(function()
 end)
 
 tool.Parent = player:WaitForChild("Backpack")
-tool:Clone().Parent = player:WaitForChild("StarterGear")
+tool:Clone().Parent = player:WaitForChild("StarterPack")
