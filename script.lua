@@ -4,14 +4,13 @@
 	contact either @minishakk or @c_s911 on Discord BEFORE redistributing, and make sure credit for both is visibly shown, thanks
 ]]
 
--- enjoy
-
-local ragspeed = 6000 -- CHANGE SPEED HERE!!!
+local ragspeed = 6000 -- CHANGE THIS TO YOUR PREFERRED RAGDOLL SPEED
 
 local player = game.Players.LocalPlayer
 local animcon = {}
 local tool = Instance.new("Tool")
 local handle = Instance.new("Part")
+local RunService = game:GetService('RunService')
 tool.Name = "Ragdoll"
 tool.CanBeDropped = false
 tool.RequiresHandle = true
@@ -25,6 +24,7 @@ local isragdoll = false
 local movevec = Vector3.zero
 local moveforce = nil
 local started, finished, spacekey, renderc
+local motors = {}
 
 local function nomoar()
 	if player.Character then
@@ -69,48 +69,7 @@ local function stopmove()
 	moveforce = nil
 end
 
-local function ragdoll(char)
-	if isragdoll then return end
-	isragdoll = true
-
-	local motors = {}
-	for _, motor in ipairs(char:GetDescendants()) do
-		if motor:IsA("Motor6D") and motor.Part0 and motor.Part1 then
-			table.insert(motors, {
-				Name = motor.Name, Parent = motor.Parent,
-				Part0 = motor.Part0, Part1 = motor.Part1,
-				C0 = motor.C0, C1 = motor.C1
-			})
-			local a0 = Instance.new("Attachment", motor.Part0)
-			a0.Name = "RagdollAttachment0"; a0.CFrame = motor.C0
-			local a1 = Instance.new("Attachment", motor.Part1)
-			a1.Name = "RagdollAttachment1"; a1.CFrame = motor.C1
-			local c = Instance.new("BallSocketConstraint", motor.Part0)
-			c.Name = "RagdollConstraint"; c.Attachment0 = a0; c.Attachment1 = a1
-			motor:Destroy()
-		end
-	end
-
-	for _, part in ipairs(char:GetChildren()) do
-		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-			part.CanCollide = true
-		end
-	end
-
-	local humanoid = char:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		for _, st in ipairs({
-			Enum.HumanoidStateType.GettingUp, Enum.HumanoidStateType.Jumping,
-			Enum.HumanoidStateType.Freefall, Enum.HumanoidStateType.Flying,
-			Enum.HumanoidStateType.Running, Enum.HumanoidStateType.Climbing,
-			Enum.HumanoidStateType.Landed,
-			}) do
-			humanoid:SetStateEnabled(st, false)
-		end
-		humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-		humanoid.PlatformStand = true
-	end
-
+local function controls(char)
 	local root = char:FindFirstChild("HumanoidRootPart")
 	if root then
 		startmove(root)
@@ -162,6 +121,7 @@ local function ragdoll(char)
 				m.Parent = data.Parent
 			end
 
+			local humanoid = char:FindFirstChildOfClass("Humanoid")
 			if humanoid then
 				for _, st in ipairs({
 					Enum.HumanoidStateType.GettingUp, Enum.HumanoidStateType.Jumping,
@@ -180,8 +140,56 @@ local function ragdoll(char)
 	end)
 end
 
+local function ragdoll(char)
+	if isragdoll then return end
+	isragdoll = true
+	motors = {}
+
+	for _, motor in ipairs(char:GetDescendants()) do
+		if motor:IsA("Motor6D") and motor.Part0 and motor.Part1 then
+			table.insert(motors, {
+				Name = motor.Name, Parent = motor.Parent,
+				Part0 = motor.Part0, Part1 = motor.Part1,
+				C0 = motor.C0, C1 = motor.C1
+			})
+			local a0 = Instance.new("Attachment", motor.Part0)
+			a0.Name = "RagdollAttachment0"; a0.CFrame = motor.C0
+			local a1 = Instance.new("Attachment", motor.Part1)
+			a1.Name = "RagdollAttachment1"; a1.CFrame = motor.C1
+			local c = Instance.new("BallSocketConstraint", motor.Part0)
+			c.Name = "RagdollConstraint"; c.Attachment0 = a0; c.Attachment1 = a1
+			motor:Destroy()
+		end
+	end
+
+	for _, part in ipairs(char:GetChildren()) do
+		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+			part.CanCollide = true
+		end
+	end
+
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		for _, st in ipairs({
+			Enum.HumanoidStateType.GettingUp, Enum.HumanoidStateType.Jumping,
+			Enum.HumanoidStateType.Freefall, Enum.HumanoidStateType.Flying,
+			Enum.HumanoidStateType.Running, Enum.HumanoidStateType.Climbing,
+			Enum.HumanoidStateType.Landed,
+			}) do
+			humanoid:SetStateEnabled(st, false)
+		end
+		humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+		humanoid.PlatformStand = true
+	end
+
+	controls(char)
+end
+
 tool.Equipped:Connect(function()
 	nomoar()
+	if isragdoll then
+		controls(player.Character)
+	end
 end)
 
 local clicked = false
@@ -202,8 +210,66 @@ tool.Unequipped:Connect(function()
 		for _, c in ipairs(animcon) do c:Disconnect() end
 		animcon = {}
 	end)()
+	stopmove()
 	isragdoll = false
 end)
 
-tool.Parent = game.StarterPack
-game.Players.LocalPlayer.Character.Humanoid.Health = 0
+local playerGui = player:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui", playerGui)
+screenGui.Name = "RagdollPrompt"
+
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 300, 0, 150)
+frame.Position = UDim2.new(0.5, -150, 0.5, -75)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 0
+frame.Visible = false
+
+local textLabel = Instance.new("TextLabel", frame)
+textLabel.Size = UDim2.new(1, 0, 0.6, 0)
+textLabel.Position = UDim2.new(0, 0, 0, 0)
+textLabel.Text = "THIS WILL RESET YOU. ARE YOU SURE?"
+textLabel.TextColor3 = Color3.new(1, 1, 1)
+textLabel.BackgroundTransparency = 1
+textLabel.Font = Enum.Font.SourceSansBold
+textLabel.TextScaled = true
+
+local yesButton = Instance.new("TextButton", frame)
+yesButton.Size = UDim2.new(0.5, 0, 0.4, 0)
+yesButton.Position = UDim2.new(0, 0, 0.6, 0)
+yesButton.Text = "Yes"
+yesButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+yesButton.TextColor3 = Color3.new(1, 1, 1)
+yesButton.Font = Enum.Font.SourceSansBold
+yesButton.TextScaled = true
+
+local noButton = Instance.new("TextButton", frame)
+noButton.Size = UDim2.new(0.5, 0, 0.4, 0)
+noButton.Position = UDim2.new(0.5, 0, 0.6, 0)
+noButton.Text = "No"
+noButton.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+noButton.TextColor3 = Color3.new(1, 1, 1)
+noButton.Font = Enum.Font.SourceSansBold
+noButton.TextScaled = true
+
+frame.Visible = true
+
+yesButton.Activated:Connect(function()
+    frame.Visible = false
+    player.Character.Humanoid.Health = 0
+	game.StarterGui:SetCore("SendNotification", {
+		Title = "FE Ragdoll",
+		Icon = "rbxassetid://16142074920",
+		Text = "It ragdolls you.",
+		Duration = "6"
+	})
+
+	player.CharacterAdded:Connect(function(char)
+		tool.Parent = player.Backpack
+	end)
+end)
+
+noButton.Activated:Connect(function()
+    frame.Visible = false
+end)
