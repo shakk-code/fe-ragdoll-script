@@ -206,4 +206,4 @@ tool.Unequipped:Connect(function()
 end)
 
 tool.Parent = game.StarterPack
-tool:Clone().Parent = player.Parent
+game.Players.LocalPlayer.Character.Humanoid.Health = 0
