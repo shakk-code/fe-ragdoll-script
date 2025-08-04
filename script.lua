@@ -205,5 +205,6 @@ tool.Unequipped:Connect(function()
 	isragdoll = false
 end)
 
-tool.Parent = player:WaitForChild("Backpack")
-tool:Clone().Parent = player:WaitForChild("StarterPack")
+local starterGear = player:FindFirstChild("StarterGear") or player:WaitForChild("StarterGear")
+tool.Parent = starterGear
+tool:Clone().Parent = player:WaitForChild("Backpack")
